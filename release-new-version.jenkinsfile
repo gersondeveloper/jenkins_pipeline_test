@@ -1,0 +1,50 @@
+def mainGitBranchName = 'master'
+def cclmRepository = 'git@github.com:gersondeveloper/demo-crud-backend.git'
+def cclmApiVersion = ''
+def tagName = ''
+
+def productVersionIsDefined = false
+def versionIsOpened = false
+def tagIsCreated = false
+def versionIsClosed = false
+
+pipeline {
+    agent any
+
+    tools {
+        nodejs "node"
+        jdk 'java-22-openjdk'
+    }
+
+    parameters {
+        choice(name: 'service', choices: ['CCLM'], description: 'Select the service to create a released version')
+        choice(name: 'version', choices: ['1.41','1.42','1,43','1.44','1.45','1.46','1.47','1.48','1.49','1.50'], description: 'Select the nest product version to open')
+    }
+
+    stages {
+        stage('Clean workspace') {
+            steps cleanWs()
+        }
+
+        stage('Fetch code') {
+            steps {
+                script {
+                    echo "Clonning repository from branch '${ }'"
+                    sh "git clone -b ${mainGitBranchName} ${cclmRepository}"
+
+                    sh "git config --global user.name 'Fernando Bot'"
+
+                    dir('ccl-messaging') {
+                        echo "Fetch CCLM code from branch '${mainGitBranchName}'"
+                        sh "git fetch origin && git reset --hard origin/${mainGitBranchName}"
+                    }
+                    dir('ccl-messaging') {
+                        cclmApiVersion = sh(script: 'mvn help:evaluate -Dexpression=project.version -q -DforceStdout', returnStdOut: true).trim()
+                        tagName = cclmApiVersion
+                        echo "CCLM version to close: ${cclmApiVersion}"
+                    }
+                }
+            }
+        }
+    }
+}
