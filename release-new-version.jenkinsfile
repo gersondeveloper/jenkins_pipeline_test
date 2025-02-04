@@ -1,5 +1,5 @@
 def mainGitBranchName = 'master'
-def cclmRepository = 'git@github.com:gersondeveloper/demo-crud-backend.git'
+def cclmRepository = 'https://github.com/gersondeveloper/demo-crud-backend.git'
 def cclmApiVersion = ''
 def tagName = ''
 
