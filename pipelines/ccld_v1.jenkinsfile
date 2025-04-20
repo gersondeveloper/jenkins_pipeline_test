@@ -1,0 +1,59 @@
+pipeline {
+    agent any
+
+    parameters {
+        string(name: 'RELEASE_VERSION', defaultValue: '1.1.0', description: 'Versão do release (sem -SNAPSHOT)')
+        string(name: 'NEXT_VERSION', defaultValue: '1.2.0-SNAPSHOT', description: 'Versão seguinte para continuar o dev')
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git url: 'https://github.com/gersondeveloper/ccld.git', branch: 'master'
+            }
+        }
+
+        stage('Build & Test') {
+            steps {
+                sh 'mvn clean install'
+            }
+        }
+
+        stage('Atualizar versão para release') {
+            steps {
+                sh "mvn versions:set -DnewVersion=${params.RELEASE_VERSION}"
+                sh "mvn versions:commit"
+            }
+        }
+
+        stage('Commit + Tag') {
+            steps {
+                sh """
+                    git config user.name "jenkins"
+                    git config user.email "jenkins@localhost"
+                    git commit -am "release: ${params.RELEASE_VERSION}"
+                    git tag v${params.RELEASE_VERSION}
+                    git push origin master
+                    git push origin v${params.RELEASE_VERSION}
+                """
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                sh "mvn clean deploy -Pgithub"
+            }
+        }
+
+        stage('Atualizar para próxima versão') {
+            steps {
+                sh "mvn versions:set -DnewVersion=${params.NEXT_VERSION}"
+                sh "mvn versions:commit"
+                sh """
+                    git commit -am "chore: prepara próxima versão ${params.NEXT_VERSION}"
+                    git push origin master
+                """
+            }
+        }
+    }
+}
